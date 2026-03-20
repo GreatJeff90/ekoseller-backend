@@ -3,6 +3,17 @@ const router = express.Router();
 const db = require('../db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
+
+// 1. Setup the "Transporter" (Your email server details)
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER, // Your gmail
+        pass: process.env.EMAIL_PASS  // The 16-character app password
+    }
+});
+
 
 router.post('/register', async (req, res) => {
     const { 
@@ -127,13 +138,22 @@ router.put('/verify-kyc', async (req, res) => {
 // 1. Request Reset (Generates the 6-digit code)
 router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
-    const code = Math.floor(100000 + Math.random() * 900000).toString(); // Generate 6 digits
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
 
     try {
-        const [result] = await db.query('UPDATE users SET reset_code = ? WHERE email = ?', [code, email]);
+        await db.query('UPDATE users SET reset_code = ? WHERE email = ?', [code, email]);
 
-        // In a real app, you'd email the code here. For now, we'll return it in the response.
-        res.json({ status: "success", message: "OTP sent", debug_code: code });
+        // 2. SEND THE EMAIL
+        const mailOptions = {
+            from: 'ekoseller@gmail.com',
+            to: email,
+            subject: 'EkoSeller Password Reset Code',
+            text: `Your reset code is: ${code}. It expires in 10 minutes.`
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        res.json({ status: "success", message: "OTP sent to your email" });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
