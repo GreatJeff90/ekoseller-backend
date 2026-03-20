@@ -31,4 +31,45 @@ router.post('/register', async (req, res) => {
     }
 });
 
+// Login Route
+router.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    try {
+        // 1. Find the user by email
+        const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+        
+        if (users.length === 0) {
+            return res.status(401).json({ error: "Invalid email or password" });
+        }
+
+        const user = users[0];
+
+        // 2. Compare the provided password with the hashed password in the DB
+        const isMatch = await bcrypt.compare(password, user.password);
+
+        if (!isMatch) {
+            return res.status(401).json({ error: "Invalid email or password" });
+        }
+
+        // 3. Success!
+        res.json({
+            status: "success",
+            message: "Login successful",
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email
+            }
+        });
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;
