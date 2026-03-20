@@ -44,6 +44,22 @@ router.get('/market/:marketName', async (req, res) => {
     }
 });
 
+// GET products by a specific seller
+router.get('/seller/:sellerId', async (req, res) => {
+    const sellerId = req.params.sellerId;
+    try {
+        const [products] = await db.query('SELECT * FROM products WHERE seller_id = ?', [sellerId]);
+        const [sellerInfo] = await db.query('SELECT username, market, full_name FROM users WHERE id = ?', [sellerId]);
+        
+        res.json({
+            seller: sellerInfo[0],
+            products: products
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // GET all products for the homepage
 router.get('/products', async (req, res) => {
     try {
