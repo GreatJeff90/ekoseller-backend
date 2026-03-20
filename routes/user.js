@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const bcrypt = require('bcrypt'); // Import bcrypt
+const bcrypt = require('bcrypt'); 
+const jwt = require('jsonwebtoken');
 
 router.post('/register', async (req, res) => {
     const { username, email, password } = req.body;
@@ -31,16 +32,11 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Login Route
+// Login Route with JWT
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-        return res.status(400).json({ error: "Email and password are required" });
-    }
-
     try {
-        // 1. Find the user by email
         const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
         
         if (users.length === 0) {
@@ -48,18 +44,23 @@ router.post('/login', async (req, res) => {
         }
 
         const user = users[0];
-
-        // 2. Compare the provided password with the hashed password in the DB
         const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch) {
             return res.status(401).json({ error: "Invalid email or password" });
         }
 
-        // 3. Success!
+        // --- NEW: Generate JWT Token ---
+        const token = jwt.sign(
+            { id: user.id, email: user.email }, // Data to hide in the token
+            process.env.JWT_SECRET,             // Your secret key from Railway
+            { expiresIn: '1d' }                 // Token expires in 1 day
+        );
+
         res.json({
             status: "success",
             message: "Login successful",
+            token: token, // Send this back to your React Native app!
             user: {
                 id: user.id,
                 username: user.username,
