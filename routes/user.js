@@ -159,4 +159,19 @@ router.post('/reset-password', async (req, res) => {
     }
 });
 
+// GET Wallet details for the Seller
+router.get('/wallet/:userId', async (req, res) => {
+    try {
+        const [user] = await db.query('SELECT wallet_balance FROM users WHERE id = ?', [req.params.userId]);
+        const [history] = await db.query('SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 10', [req.params.userId]);
+
+        res.json({
+            balance: user[0].wallet_balance,
+            transactions: history
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;
