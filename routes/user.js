@@ -174,4 +174,62 @@ router.get('/wallet/:userId', async (req, res) => {
     }
 });
 
+// GET Personal Info
+router.get('/profile/:userId', async (req, res) => {
+    try {
+        const [user] = await db.query('SELECT username, email, full_name, phone_number, role FROM users WHERE id = ?', [req.params.userId]);
+        res.json(user[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// UPDATE Profile (The "Save" button in your Figma)
+router.put('/update-profile', async (req, res) => {
+    const { userId, full_name, phone_number, email } = req.body;
+    try {
+        await db.query('UPDATE users SET full_name = ?, phone_number = ?, email = ? WHERE id = ?', [full_name, phone_number, email, userId]);
+        res.json({ status: "success", message: "Profile updated" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET Addresses
+router.get('/addresses/:userId', async (req, res) => {
+    try {
+        const [rows] = await db.query('SELECT * FROM addresses WHERE user_id = ?', [req.params.userId]);
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST Review
+router.post('/review', async (req, res) => {
+    const { userId, rating, comment } = req.body;
+    try {
+        await db.query('INSERT INTO reviews (user_id, rating, comment) VALUES (?, ?, ?)', [userId, rating, comment]);
+        res.json({ status: "success", message: "Review submitted" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.put('/change-password', async (req, res) => {
+    const { userId, oldPassword, newPassword } = req.body;
+    try {
+        const [user] = await db.query('SELECT password FROM users WHERE id = ?', [userId]);
+        const isMatch = await bcrypt.compare(oldPassword, user[0].password);
+
+        if (!isMatch) return res.status(401).json({ error: "Old password incorrect" });
+
+        const hashed = await bcrypt.hash(newPassword, 10);
+        await db.query('UPDATE users SET password = ? WHERE id = ?', [hashed, userId]);
+        res.json({ status: "success", message: "Password changed" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;
