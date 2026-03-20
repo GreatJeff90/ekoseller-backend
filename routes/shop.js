@@ -102,4 +102,16 @@ router.get('/active-markets', async (req, res) => {
     }
 });
 
+// GET order details for tracking
+router.get('/order/:orderId', async (req, res) => {
+    try {
+        const [order] = await db.query('SELECT * FROM orders WHERE id = ?', [req.params.orderId]);
+        if (order.length === 0) return res.status(404).json({ error: "Order not found" });
+        
+        res.json(order[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;

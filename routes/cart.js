@@ -45,4 +45,29 @@ router.get('/user/:userId', async (req, res) => {
     }
 });
 
+// Place Order (Checkout)
+router.post('/checkout', async (req, res) => {
+    const { user_id, total_amount, delivery_method, address, phone_number } = req.body;
+
+    try {
+        // 1. Create the order
+        const [order] = await db.query(
+            `INSERT INTO orders (buyer_id, total_amount, delivery_method, address, phone_number, estimated_delivery) 
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [user_id, total_amount, delivery_method, address, phone_number, '11 hours'] // Matches your "Track Order" Figma
+        );
+
+        // 2. Clear the cart for this user
+        await db.query('DELETE FROM cart WHERE user_id = ?', [user_id]);
+
+        res.json({ 
+            status: "success", 
+            message: "Order placed successfully", 
+            orderId: order.insertId 
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;
