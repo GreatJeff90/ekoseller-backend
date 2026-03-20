@@ -5,19 +5,54 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 router.post('/register', async (req, res) => {
-    const { username, email, password, role, full_name, phone_number, country, market } = req.body;
+    const { 
+        username, 
+        email, 
+        password, 
+        role, 
+        full_name, 
+        phone_number, 
+        country, 
+        market 
+    } = req.body;
+
+    // Basic validation
+    if (!username || !email || !password || !role) {
+        return res.status(400).json({ error: "Required fields are missing (username, email, password, role)" });
+    }
 
     try {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const query = `INSERT INTO users (username, email, password, role, full_name, phone_number, country, market) 
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-        
+        // 1. Hash the password
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+        // 2. Insert into the database with the new columns
+        const query = `
+            INSERT INTO users (username, email, password, role, full_name, phone_number, country, market) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+
         const [result] = await db.query(query, [
-            username, email, hashedPassword, role, full_name, phone_number, country, market
+            username, 
+            email, 
+            hashedPassword, 
+            role, 
+            full_name || null, 
+            phone_number || null, 
+            country || 'Nigeria', 
+            market || null
         ]);
 
-        res.status(201).json({ status: "success", userId: result.insertId });
+        res.status(201).json({ 
+            status: "success", 
+            message: "User registered successfully",
+            userId: result.insertId 
+        });
+
     } catch (err) {
+        if (err.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ error: "Email or Username already exists" });
+        }
         res.status(500).json({ error: err.message });
     }
 });
