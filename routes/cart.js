@@ -19,3 +19,30 @@ router.post('/add', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+// GET items in a specific user's cart
+router.get('/user/:userId', async (req, res) => {
+    const { userId } = req.params;
+
+    try {
+        const sql = `
+            SELECT c.id AS cart_id, c.quantity, p.name, p.price, p.image_url, p.id AS product_id
+            FROM cart c
+            JOIN products p ON c.product_id = p.id
+            WHERE c.user_id = ?
+        `;
+        const [cartItems] = await db.query(sql, [userId]);
+        
+        // Calculate total for the "Checkout" button in your Figma
+        const total = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+
+        res.json({
+            items: cartItems,
+            total_amount: total
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+module.exports = router;

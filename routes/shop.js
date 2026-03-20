@@ -70,4 +70,36 @@ router.get('/products', async (req, res) => {
     }
 });
 
+// Search products by name or category
+router.get('/search', async (req, res) => {
+    const { query } = req.query; // Get search term from URL (e.g., ?query=watch)
+
+    if (!query) {
+        return res.status(400).json({ error: "Search query is required" });
+    }
+
+    try {
+        const sql = `
+            SELECT * FROM products 
+            WHERE name LIKE ? OR category LIKE ? OR description LIKE ?
+        `;
+        const searchTerm = `%${query}%`;
+        const [results] = await db.query(sql, [searchTerm, searchTerm, searchTerm]);
+        
+        res.json(results);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET list of all active markets
+router.get('/active-markets', async (req, res) => {
+    try {
+        const [markets] = await db.query('SELECT DISTINCT market FROM users WHERE role = "seller" AND market IS NOT NULL');
+        res.json(markets.map(m => m.market));
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;
